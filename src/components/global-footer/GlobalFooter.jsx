@@ -34,7 +34,7 @@ const GlobalFooter = () => {
                 placeholder="Enter email"
                 className="p-2 rounded"
               />
-              <button className="ml-2 p-2 bg-brand text-white rounded">
+              <button className="ml-2 p-2 bg-brand hover:bg-brand-hover text-white rounded">
                 Subscribe
               </button>
             </form>

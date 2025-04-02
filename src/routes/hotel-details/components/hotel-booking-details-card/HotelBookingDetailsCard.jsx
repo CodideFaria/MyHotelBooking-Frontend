@@ -117,9 +117,9 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       parseFloat(totalGst)
     ).toFixed(2);
     if (!isNaN(totalPrice)) {
-      setTotal(`${formatPrice(totalPrice)} INR`);
+      setTotal(`${formatPrice(totalPrice)}`);
     }
-    setTaxes(`${formatPrice(totalGst)} INR`);
+    setTaxes(`${formatPrice(totalGst)}`);
   };
 
   const onBookingConfirm = () => {
@@ -183,8 +183,8 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
           <div className="text-lg font-semibold text-gray-800 mb-1">
             Total Price
           </div>
-          <div className="text-xl font-bold text-indigo-600">{total}</div>
-          <div className="text-sm text-green-600">
+          <div className="text-xl font-bold text-brand-600">{total}</div>
+          <div className="text-sm text-brand-secondary-hover">
             {bookingDetails.cancellationPolicy}
           </div>
         </div>
@@ -234,7 +234,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
         <div className="mb-4">
           <div className="font-semibold text-gray-800">Per day rate</div>
           <div className="text-gray-600">
-            {formatPrice(bookingDetails.currentNightRate)} INR
+            {formatPrice(bookingDetails.currentNightRate)}
           </div>
         </div>
 
@@ -256,7 +256,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       <div className="px-6 py-4 bg-gray-50">
         <button
           onClick={onBookingConfirm}
-          className="w-full bg-brand-secondary text-white py-2 rounded hover:bg-yellow-600 transition duration-300"
+          className="w-full bg-brand-secondary text-white py-2 rounded hover:bg-brand-secondary-hover transition duration-300"
         >
           Confirm Booking
         </button>

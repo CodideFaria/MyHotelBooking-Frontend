@@ -4,8 +4,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'brand': '#074498',
-        'brand-secondary': '#cbae37'
+        'brand': '#079890',
+        'brand-hover': '#06827b',
+        'brand-secondary': '#6dc330',
+        'brand-secondary-hover': '#569926'
       },
       fontFamily: {
         sans: ['Jost', 'sans-serif'],

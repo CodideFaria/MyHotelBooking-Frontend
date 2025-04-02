@@ -20,9 +20,6 @@ const ProfileDetailsPanel = ({ userDetails }) => {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
-  const [nationality, setNationality] = useState('');
-  const [countries, setCountries] = useState([]);
-
   const [toastMessage, setToastMessage] = useState('');
 
   const clearToastMessage = () => {
@@ -44,37 +41,36 @@ const ProfileDetailsPanel = ({ userDetails }) => {
   const handleSaveClick = async () => {
     // check if newstate is different from old state
     if (
-      firstName === userDetails.firstName &&
-      lastName === userDetails.lastName &&
-      phoneNumber === userDetails.phone &&
-      nationality === userDetails.country
+      firstName === userDetails.first_name &&
+      lastName === userDetails.last_name &&
+      phoneNumber === userDetails.phone_number &&
+      dateOfBirth === userDetails.date_of_birth
     ) {
       setIsEditMode(false);
       return;
     }
 
     const updatedUserDetails = {
-      firstName,
-      lastName,
-      phoneNumber,
-      country: nationality,
+      user_id: userDetails.id,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phoneNumber,
+      date_of_birth: dateOfBirth,
     };
     // Call the API to update the user details
-    const response = await networkAdapter.patch(
-      '/api/users/update-profile',
-      updatedUserDetails
-    );
-    if (response && response.data.status) {
+    const response = await networkAdapter.put('/api/user', updatedUserDetails);
+    if (response && response.status === 'success') {
+      console.log('User details updated successfully');
       setToastMessage({
         type: 'success',
-        message: response.data.status,
+        message: "User details updated successfully.",
       });
     } else {
+      console.log('Failed to update user details');
       // revert to original state
-      setFirstName(userDetails.firstName);
-      setLastName(userDetails.lastName);
-      setPhoneNumber(userDetails.phone);
-      setNationality(userDetails.country);
+      setFirstName(userDetails.first_name);
+      setLastName(userDetails.last_name);
+      setPhoneNumber(userDetails.phone_number);
       setToastMessage({
         type: 'error',
         message: 'Oops, something went wrong. Please try again later.',
@@ -87,31 +83,15 @@ const ProfileDetailsPanel = ({ userDetails }) => {
   // effect to set initial state of user details
   useEffect(() => {
     if (userDetails) {
-      setFirstName(userDetails.firstName || '');
-      setLastName(userDetails.lastName || '');
+      setFirstName(userDetails.first_name || '');
+      setLastName(userDetails.last_name || '');
       setEmail(userDetails.email || '');
-      setPhoneNumber(userDetails.phone || '');
-      setNationality(userDetails.country || '');
-      setIsEmailVerified(userDetails.isEmailVerified || '');
-      setIsPhoneVerified(userDetails.isPhoneVerified || '');
-      setDateOfBirth(userDetails.dateOfBirth || '');
+      setPhoneNumber(userDetails.phone_number || '');
+      setIsEmailVerified(userDetails.email_verified || '');
+      setIsPhoneVerified(userDetails.phone_number_verified || '');
+      setDateOfBirth(userDetails.date_of_birth || '');
     }
   }, [userDetails]);
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      const countriesData = await networkAdapter.get('/api/misc/countries');
-      if (countriesData && countriesData.data) {
-        console.log('countriesData', countriesData.data);
-        const mappedValues = countriesData.data.elements.map((country) => ({
-          label: country.name,
-          value: country.name,
-        }));
-        setCountries(mappedValues);
-      }
-    };
-    fetchCountries();
-  }, []);
 
   return (
     <div className="bg-white shadow sm:rounded-lg flex flex-col">
@@ -152,13 +132,6 @@ const ProfileDetailsPanel = ({ userDetails }) => {
                 onChange={setDateOfBirth}
               />
               <div className="relative">
-                <TextField
-                  label="Country"
-                  value={nationality}
-                  onChange={setNationality}
-                  isSelectable={true}
-                  selectableData={countries}
-                />
               </div>
             </>
           ) : (
@@ -180,7 +153,6 @@ const ProfileDetailsPanel = ({ userDetails }) => {
                 label="Date of birth"
                 value={dateOfBirth || 'Enter your date of birth'}
               />
-              <DisplayField label="Nationality" value={nationality} />
             </>
           )}
         </dl>
@@ -190,13 +162,13 @@ const ProfileDetailsPanel = ({ userDetails }) => {
           <>
             <button
               onClick={handleCancelClick}
-              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveClick}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
             >
               Save
             </button>
@@ -204,7 +176,7 @@ const ProfileDetailsPanel = ({ userDetails }) => {
         ) : (
           <button
             onClick={handleEditClick}
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
           >
             Edit
           </button>
@@ -257,7 +229,7 @@ const TextField = ({
       ) : (
         <input
           type={type}
-          className="mt-1 border py-1 px-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full text-sm md:text-base  rounded-md"
+          className="mt-1 border py-1 px-2 focus:ring-brand-500 focus:border-brand-500 block w-full text-sm md:text-base  rounded-md"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />

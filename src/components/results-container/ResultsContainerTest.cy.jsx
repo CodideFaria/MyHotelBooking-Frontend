@@ -1,4 +1,3 @@
-/// <reference types="Cypress" />
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import ResultsContainer from './ResultsContainer';
@@ -79,7 +78,7 @@ describe('ResultsContainer', () => {
           'Free cancellation',
           'No prepayment needed – pay at the property',
         ],
-        price: '18900',
+        price: '189',
         ratings: '5',
         city: 'pune',
         reviews: {
@@ -206,7 +205,7 @@ describe('ResultsContainer', () => {
           'Free wifi',
           'Free lunch',
         ],
-        price: '25300',
+        price: '253',
         ratings: '4',
         city: 'pune',
       },
@@ -225,7 +224,7 @@ describe('ResultsContainer', () => {
           'No prepayment needed – pay at the property',
           'Free wifi',
         ],
-        price: '11300',
+        price: '113',
         ratings: '5',
         city: 'pune',
       },
@@ -245,7 +244,7 @@ describe('ResultsContainer', () => {
           'Free wifi',
           'Free taxi from airport',
         ],
-        price: '14599',
+        price: '145',
         ratings: '3',
         city: 'pune',
       },
@@ -265,7 +264,7 @@ describe('ResultsContainer', () => {
           'Free cancellation',
           'No prepayment needed – pay at the property',
         ],
-        price: '9799',
+        price: '97',
         ratings: '4.3',
         city: 'pune',
       },

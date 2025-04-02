@@ -259,15 +259,15 @@ const Checkout = () => {
           </div>
           <div className="flex items-center justify-between">
             <button
-              className={`bg-brand hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-300 ${
+              className={`bg-brand hover:bg-brand-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-300 ${
                 isSubmitDisabled
                   ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-blue-700'
+                  : 'hover:bg-brand-hover'
               }`}
               type="submit"
               disabled={isSubmitDisabled}
             >
-              Pay ₹ {location.state?.total}
+              Pay € {location.state?.total}
             </button>
           </div>
         </form>

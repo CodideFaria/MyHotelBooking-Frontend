@@ -13,7 +13,9 @@ const validations = {
   fields: {
     email: {
       required: true,
-      pattern: /^[^\s-]\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}[^\s-]$/i,
+      // This pattern allows letters, numbers, dots, underscores, percentages, pluses, and dashes
+      // in the username part, and supports domains with multiple subparts.
+      pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
   },
 

@@ -1,38 +1,33 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { networkAdapter } from 'services/NetworkAdapter';
+import { createContext, useState } from 'react';
 
 export const AuthContext = createContext();
 
-/**
- * Provides authentication state and user details to the application.
- * @namespace AuthProvider
- * @component
- */
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userDetails, setUserDetails] = useState(null);
-  const [authCheckTrigger, setAuthCheckTrigger] = useState(false);
+  // Initialize based on token and userDetails existence in localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [userDetails, setUserDetails] = useState(() => {
+    const storedUserDetails = localStorage.getItem('userDetails');
+    return storedUserDetails ? JSON.parse(storedUserDetails) : null;
+  });
 
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const response = await networkAdapter.get('api/users/auth-user');
-      if (response && response.data) {
-        setIsAuthenticated(response.data.isAuthenticated);
-        setUserDetails(response.data.userDetails);
-      }
-    };
+  // Function to handle login: update state and localStorage
+  const login = (data) => {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('userDetails', JSON.stringify(data));
+    setIsAuthenticated(true);
+    setUserDetails(data);
+  };
 
-    checkAuthStatus();
-  }, [authCheckTrigger]);
-
-  const triggerAuthCheck = () => {
-    setAuthCheckTrigger((prev) => !prev);
+  // Function to handle logout: clear state and localStorage
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userDetails');
+    setIsAuthenticated(false);
+    setUserDetails(null);
   };
 
   return (
-    <AuthContext.Provider
-      value={{ isAuthenticated, userDetails, triggerAuthCheck }}
-    >
+    <AuthContext.Provider value={{ isAuthenticated, userDetails, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

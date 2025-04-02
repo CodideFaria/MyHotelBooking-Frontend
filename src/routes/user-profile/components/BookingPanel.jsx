@@ -1,6 +1,11 @@
 const BookingPanel = ({ bookings }) => {
   return (
     <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      {bookings.length === 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          You have no bookings yet.
+        </div>
+      ) : (
       <ul className="divide-y divide-gray-200">
         {bookings.map((booking, index) => (
           <li key={index} className="bg-white hover:bg-gray-50">
@@ -77,6 +82,7 @@ const BookingPanel = ({ bookings }) => {
           </li>
         ))}
       </ul>
+      )}
     </div>
   );
 };

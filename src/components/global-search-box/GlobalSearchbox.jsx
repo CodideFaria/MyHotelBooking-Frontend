@@ -59,7 +59,7 @@ const GlobalSearchBox = (props) => {
         type="number"
       />
       <button
-        className="w-full md:w-auto sb__button--secondary bg-brand-secondary hover:bg-yellow-600 px-4 py-2 text-white"
+        className="w-full md:w-auto sb__button--secondary bg-brand-secondary hover:bg-brand-secondary-hover px-4 py-2 text-white"
         onClick={onSearchButtonAction}
       >
         SEARCH

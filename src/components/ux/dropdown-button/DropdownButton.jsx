@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import useOutsideClickHandler from 'hooks/useOutsideClickHandler';
+import { AuthContext } from 'contexts/AuthContext';
 
 const DropdownButton = (props) => {
   const triggerType = props.triggerType || 'click';
   const color = props.color || 'bg-brand';
   const wrapperRef = useRef();
   const buttonRef = useRef();
+  const { userDetails } = useContext(AuthContext);
   const [isDropdownContainerVisible, setIsDropdownContainerVisible] =
     useState(false);
 
@@ -34,7 +36,7 @@ const DropdownButton = (props) => {
         className={`dropdown-trigger__button text-white ${color} font-medium p-4 uppercase text-center inline-flex items-center`}
         type="button"
       >
-        MY ACCOUNT{' '}
+        {userDetails.first_name} {userDetails.last_name}{' '}
         <svg
           className="w-2.5 h-2.5 ms-3"
           aria-hidden="true"

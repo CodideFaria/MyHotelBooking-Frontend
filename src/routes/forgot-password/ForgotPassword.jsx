@@ -71,7 +71,7 @@ const ForgotPassword = () => {
                 <div className="my-6  text-center">
                   <Link
                     to="/"
-                    className="px-12 bg-brand hover:bg-indigo-500 text-white font-semibold py-3"
+                    className="px-12 bg-brand hover:bg-brand-hover text-white font-semibold py-3"
                   >
                     GO BACK
                   </Link>
@@ -112,14 +112,14 @@ const ForgotPassword = () => {
                 <div className="flex-wrap items-center justify-between">
                   <button
                     type="submit"
-                    className="w-full bg-brand hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    className="w-full bg-brand hover:bg-brand-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                   >
                     Reset your password
                   </button>
                   <div className="mt-5">
                     <Link
                       to="/login"
-                      className="inline-block align-baseline text-lg text-gray-500 hover:text-blue-800 text-right"
+                      className="inline-block align-baseline text-lg text-gray-500 hover:text-gray-800 text-right"
                     >
                       Back to login
                     </Link>

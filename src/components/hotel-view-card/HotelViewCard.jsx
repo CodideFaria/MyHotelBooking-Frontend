@@ -62,7 +62,7 @@ const HotelViewCard = (props) => {
         <ul>
           {benefits.length > 0 &&
             benefits.map((benefit, index) => (
-              <li className="text-green-800 font-medium text-sm" key={index}>
+              <li className="text-brand-secondary-hover font-medium text-sm" key={index}>
                 <FontAwesomeIcon icon={faCheck} /> {benefit}
               </li>
             ))}
@@ -74,11 +74,11 @@ const HotelViewCard = (props) => {
             {ratings} <FontAwesomeIcon icon={faStar} />
           </h4>
           <p className="text-slate-600 font-bold whitespace-nowrap">
-            ₹ {formatPrice(price)}
+            € {formatPrice(price)}
           </p>
         </div>
         <button
-          className=" bg-brand-secondary px-4 py-2 text-white whitespace-nowrap"
+          className=" bg-brand-secondary hover:bg-brand-secondary-hover px-4 py-2 text-white whitespace-nowrap"
           onClick={onBookNowClick}
         >
           Book now
