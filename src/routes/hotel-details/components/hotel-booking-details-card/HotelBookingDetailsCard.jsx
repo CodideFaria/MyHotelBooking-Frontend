@@ -17,15 +17,12 @@ import format from 'date-fns/format';
  * @param {string} props.hotelCode - The unique code for the hotel.
  */
 const HotelBookingDetailsCard = ({ hotelCode }) => {
-  // State for date picker visibility
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
-
   const navigate = useNavigate();
 
-  // State for error message
   const [errorMessage, setErrorMessage] = useState('');
 
-  // State for date range
+  // Date range state
   const [dateRange, setDateRange] = useState([
     {
       startDate: new Date(),
@@ -34,11 +31,8 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     },
   ]);
 
-  // State for selected room, guests, and rooms
-  const [selectedRoom, setSelectedRoom] = useState({
-    value: '1 King Bed Standard Non Smoking',
-    label: '1 King Bed Standard Non Smoking',
-  });
+  // Local states for room selection and booking details
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedGuests, setSelectedGuests] = useState({
     value: 2,
     label: '2 guests',
@@ -48,50 +42,46 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     label: '1 room',
   });
 
-  // State for pricing and booking details
+  // Pricing states
   const [total, setTotal] = useState(0);
   const [taxes, setTaxes] = useState(0);
   const [bookingPeriodDays, setBookingPeriodDays] = useState(1);
-  const [bookingDetails, setBookingDetails] = useState({});
 
-  // Options for guests and rooms
+  // Booking details from API: cancellation policy, rooms, etc.
+  const [bookingDetails, setBookingDetails] = useState({});
+  const [roomOptions, setRoomOptions] = useState([]);
+
+  // Fallback values for guest and room count options.
   const guestOptions = Array.from(
-    { length: bookingDetails.maxGuestsAllowed },
-    (_, i) => ({ value: i + 1, label: `${i + 1} guest` })
+    { length: bookingDetails.maxGuestsAllowed || 4 },
+    (_, i) => ({ value: i + 1, label: `${i + 1} guest${i > 0 ? 's' : ''}` })
   );
   const roomNumberOptions = Array.from(
-    { length: bookingDetails.maxRoomsAllowedPerGuest },
-    (_, i) => ({ value: i + 1, label: `${i + 1} room` })
+    { length: bookingDetails.maxRoomsAllowedPerGuest || 2 },
+    (_, i) => ({ value: i + 1, label: `${i + 1} room${i > 0 ? 's' : ''}` })
   );
-  const roomOptions = [
-    {
-      value: '1 King Bed Standard Non Smoking',
-      label: '1 King Bed Standard Non Smoking',
-    },
-  ];
 
-  // Handlers for select changes
+  // Handler when room type selection changes.
   const handleRoomTypeChange = (selectedOption) => {
     setSelectedRoom(selectedOption);
     calculatePrices();
   };
+
   const handleGuestsNumberChange = (selectedOption) => {
     setSelectedGuests(selectedOption);
   };
+
   const handleRoomsNumberChange = (selectedOption) => {
     setSelectedRooms(selectedOption);
     calculatePrices();
   };
 
-  // Handler for date picker visibility toggle
   const onDatePickerIconClick = () => {
     setisDatePickerVisible(!isDatePickerVisible);
   };
 
   /**
-   * Handler for date range changes. Updates the booking period days and recalculates prices.
-   *
-   * @param {Object} ranges - The selected date ranges.
+   * When the date range changes, update the booking period and recalculate prices.
    */
   const onDateChangeHandler = (ranges) => {
     const { startDate, endDate } = ranges.selection;
@@ -105,23 +95,36 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   };
 
   /**
-   * Calculates the total price and taxes based on the selected room and booking period.
+   * Recalculates the total price and taxes based on the selected room’s price,
+   * number of rooms and the duration of the stay.
    */
   const calculatePrices = () => {
-    const pricePerNight = bookingDetails.currentNightRate * selectedRooms.value;
-    const gstRate =
-      pricePerNight <= 2500 ? 0.12 : pricePerNight > 7500 ? 0.18 : 0.12;
+    if (!selectedRoom || !selectedRooms.value) return;
+
+    const pricePerNight = selectedRoom.price * selectedRooms.value;
+    let gstRate = 0.12;
+
+    if (pricePerNight > 75) {
+      gstRate = 0.18;
+    } else if (pricePerNight > 25) {
+      gstRate = 0.15;
+    }
+
     const totalGst = (pricePerNight * bookingPeriodDays * gstRate).toFixed(2);
     const totalPrice = (
       pricePerNight * bookingPeriodDays +
       parseFloat(totalGst)
     ).toFixed(2);
+
     if (!isNaN(totalPrice)) {
-      setTotal(`${formatPrice(totalPrice)}`);
+      setTotal(formatPrice(totalPrice));
     }
-    setTaxes(`${formatPrice(totalGst)}`);
+    setTaxes(formatPrice(totalGst));
   };
 
+  /**
+   * Confirm the booking. Validates that both check-in and check-out dates are selected.
+   */
   const onBookingConfirm = () => {
     if (!dateRange[0].startDate || !dateRange[0].endDate) {
       setErrorMessage('Please select check-in and check-out dates.');
@@ -135,7 +138,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       checkOut,
       guests: selectedGuests.value,
       rooms: selectedRooms.value,
-      hotelName: bookingDetails.name.replaceAll(' ', '-'), // url friendly hotel name
+      hotelName: selectedRoom.label ? selectedRoom.label.replaceAll(' ', '-') : '',
     };
 
     const url = `/checkout?${queryString.stringify(queryParams)}`;
@@ -144,29 +147,49 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
         total,
         checkInTime: bookingDetails.checkInTime,
         checkOutTime: bookingDetails.checkOutTime,
+        roomId: selectedRoom.id
       },
     });
   };
 
-  // Handler for dismissing error message
+  // Dismiss error messages.
   const dismissError = () => {
     setErrorMessage('');
   };
 
-  // Effect for initial price calculation
+  // Recalculate pricing when relevant dependencies change.
   useEffect(() => {
     calculatePrices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingPeriodDays, selectedRooms, selectedRoom, bookingDetails]);
+  }, [bookingPeriodDays, selectedRooms, selectedRoom]);
 
-  // Effect for fetching booking details
+  /**
+   * Fetch booking enquiry data that contains both the list of available rooms and the cancellation policy.
+   */
   useEffect(() => {
     const getBookingDetails = async () => {
-      const response = await networkAdapter.get(
-        `api/hotel/${hotelCode}/booking/enquiry`
-      );
-      if (response && response.data) {
-        setBookingDetails(response.data);
+      try {
+        const response = await networkAdapter.get(`/api/hotel/${hotelCode}/booking/enquiry`);
+        if (response && response.data) {
+          // Set booking details (including cancellation policy).
+          setBookingDetails(response.data);
+
+          // Extract available rooms from response data.
+          const availableRooms = response.data.rooms.filter(room => room.is_available);
+          const options = availableRooms.map(room => ({
+            value: room.id,
+            label: room.description, // you can append room type or room number if desired
+            price: room.price,
+            id: room.id,
+          }));
+          setRoomOptions(options);
+          if (options.length > 0 && !selectedRoom) {
+            setSelectedRoom(options[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching booking enquiry data:', error);
+        setErrorMessage('Unable to load booking details. Please try again.');
       }
     };
     getBookingDetails();
@@ -178,12 +201,12 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
         <h2 className="text-xl font-bold">Booking Details</h2>
       </div>
       <div className="p-6 text-sm md:text-base">
-        {/* Total Price */}
+        {/* Total Price & Cancellation Policy */}
         <div className="mb-4">
           <div className="text-lg font-semibold text-gray-800 mb-1">
             Total Price
           </div>
-          <div className="text-xl font-bold text-brand-600">{total}</div>
+          <div className="text-xl font-bold text-brand-600">€{total}</div>
           <div className="text-sm text-brand-secondary-hover">
             {bookingDetails.cancellationPolicy}
           </div>
@@ -204,7 +227,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
           </div>
         </div>
 
-        {/* Reservation */}
+        {/* Reservation Details */}
         <div className="mb-4">
           <div className="font-semibold text-gray-800">Reservation</div>
           <Select
@@ -220,37 +243,34 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
           />
         </div>
 
-        {/* Room Type */}
+        {/* Room Type Selection */}
         <div className="mb-4">
           <div className="font-semibold text-gray-800">Room Type</div>
           <Select
             value={selectedRoom}
             onChange={handleRoomTypeChange}
             options={roomOptions}
+            placeholder="Select a room type"
           />
         </div>
 
-        {/* Per day rate */}
+        {/* Per Day Rate based on selected room */}
         <div className="mb-4">
           <div className="font-semibold text-gray-800">Per day rate</div>
           <div className="text-gray-600">
-            {formatPrice(bookingDetails.currentNightRate)}
+            €{selectedRoom ? formatPrice(selectedRoom.price) : '0'}
           </div>
         </div>
 
         {/* Taxes */}
         <div className="mb-4">
           <div className="font-semibold text-gray-800">Taxes</div>
-          <div className="text-gray-600">{taxes}</div>
+          <div className="text-gray-600">€{taxes}</div>
           <div className="text-xs text-gray-500">{DEFAULT_TAX_DETAILS}</div>
         </div>
 
         {errorMessage && (
-          <Toast
-            type="error"
-            message={errorMessage}
-            dismissError={dismissError}
-          />
+          <Toast type="error" message={errorMessage} dismissError={dismissError} />
         )}
       </div>
       <div className="px-6 py-4 bg-gray-50">

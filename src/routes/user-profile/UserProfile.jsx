@@ -5,10 +5,14 @@ import {
   faAddressCard,
   faHotel,
   faCreditCard,
+  faTags,
+  faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from 'contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { networkAdapter } from 'services/NetworkAdapter';
 import PaymentMethodsPanel from './components/PaymentsMethodsPanel';
+import PromotionsPanel from './components/PromotionsPanel';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import useOutsideClickHandler from 'hooks/useOutsideClickHandler';
@@ -17,14 +21,13 @@ import ProfileDetailsPanel from './components/ProfileDetailsPanel';
 
 const UserProfile = () => {
   const { userDetails } = useContext(AuthContext);
-  const navigate = useNavigate();
 
   const wrapperRef = useRef();
   const buttonRef = useRef();
 
   const [isTabsVisible, setIsTabsVisible] = useState(false);
 
-  // Local state for bookings and payment methods pulled from userDetails
+  // keep loading/error if you want to show spinners/errors
   const [userBookings, setUserBookings] = useState([]);
   const [userPaymentMethods, setUserPaymentMethods] = useState([]);
 
@@ -38,21 +41,73 @@ const UserProfile = () => {
     setIsTabsVisible(!isTabsVisible);
   };
 
-  // Redirect to login if userDetails are not available
+  /* ---------------------------- Fetch user data ---------------------------- */
   useEffect(() => {
-    if (!userDetails) {
-      navigate('/login');
-    }
-  }, [navigate, userDetails]);
+    if (!userDetails) return;
 
-  // When userDetails change, update bookings and payment methods
-  useEffect(() => {
-    if (userDetails) {
-      setUserBookings(userDetails.reservations || []);
-      setUserPaymentMethods(userDetails.payment_details || []);
-    }
+    const fetchUserData = async () => {
+      try {
+        const response = await networkAdapter.get('/api/user', { id: userDetails.id });
+
+        if (response.status === 'success') {
+          setUserBookings(response.data.reservations);
+          setUserPaymentMethods(response.data.payment_details || []);
+        } else {
+          console.error('Unexpected GET /api/user response:', response);
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
+    fetchUserData();
   }, [userDetails]);
 
+  /* ------------------------------ Build tabs ------------------------------- */
+  const tabPanels = [];
+
+  if (userDetails?.admin) {
+    tabPanels.push(
+      <TabPanel key="analytics" label="Analytics" icon={faChartLine}>
+        <AnalyticsDashboard />
+      </TabPanel>
+    );
+  }
+
+  tabPanels.push(
+    <TabPanel key="personal" label="Personal Details" icon={faAddressCard}>
+      <ProfileDetailsPanel userDetails={userDetails} />
+    </TabPanel>
+  );
+
+  tabPanels.push(
+    <TabPanel key="bookings" label="Bookings" icon={faHotel}>
+      <BookingPanel bookings={userBookings} />
+    </TabPanel>
+  );
+
+  tabPanels.push(
+    <TabPanel key="payments" label="Payment details" icon={faCreditCard}>
+      <PaymentMethodsPanel
+        userPaymentMethodsData={{
+          isLoading: false,
+          data: userPaymentMethods,
+          errors: [],
+        }}
+        setUserPaymentMethodsData={setUserPaymentMethods}
+      />
+    </TabPanel>
+  );
+
+  if (userDetails?.admin) {
+    tabPanels.push(
+      <TabPanel key="promotions" label="Promotions" icon={faTags}>
+        <PromotionsPanel />
+      </TabPanel>
+    );
+  }
+
+  /* ------------------------------ Render page ------------------------------ */
   return (
     <div className="container mx-auto p-4 my-10 min-h-[530px]">
       <div className="mx-4">
@@ -65,22 +120,7 @@ const UserProfile = () => {
         </button>
       </div>
       <Tabs isTabsVisible={isTabsVisible} wrapperRef={wrapperRef}>
-        <TabPanel label="Personal Details" icon={faAddressCard}>
-          <ProfileDetailsPanel userDetails={userDetails} />
-        </TabPanel>
-        <TabPanel label="Bookings" icon={faHotel}>
-          <BookingPanel bookings={userBookings} />
-        </TabPanel>
-        <TabPanel label="Payment details" icon={faCreditCard}>
-          <PaymentMethodsPanel
-            userPaymentMethodsData={{
-              isLoading: false,
-              data: userPaymentMethods,
-              errors: [],
-            }}
-            setUserPaymentMethodsData={setUserPaymentMethods}
-          />
-        </TabPanel>
+        {tabPanels}
       </Tabs>
     </div>
   );

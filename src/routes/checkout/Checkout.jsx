@@ -17,23 +17,17 @@ import Toast from 'components/ux/toast/Toast';
  */
 const Checkout = () => {
   const [errors, setErrors] = useState({});
-
   const location = useLocation();
-
-  const navigate = useNavigate();
-
   const [searchParams] = useSearchParams();
-
   const [toastMessage, setToastMessage] = useState('');
-
   const { isAuthenticated, userDetails } = useContext(AuthContext);
-
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(false);
-
   const [paymentConfirmationDetails, setPaymentConfirmationDetails] = useState({
     isLoading: false,
     data: {},
   });
+
+  const navigate = useNavigate();
 
   const dismissToast = () => {
     setToastMessage('');
@@ -42,7 +36,7 @@ const Checkout = () => {
   // Form state for collecting user payment and address information
   const [formData, setFormData] = useState({
     email: userDetails?.email ? userDetails?.email : '',
-    nameOnCard: '',
+    nameOnCard: `${userDetails?.first_name || ''} ${userDetails?.last_name || ''}`.trim(),
     cardNumber: '',
     expiry: '',
     cvc: '',
@@ -53,12 +47,8 @@ const Checkout = () => {
   });
 
   // Format the check-in and check-out date and time
-  const checkInDateTime = `${getReadableMonthFormat(
-    searchParams.get('checkIn')
-  )}, ${location.state?.checkInTime}`;
-  const checkOutDateTime = `${getReadableMonthFormat(
-    searchParams.get('checkOut')
-  )}, ${location.state?.checkOutTime}`;
+  const checkInDateTime = `${getReadableMonthFormat(searchParams.get('checkIn'))}`;
+  const checkOutDateTime = `${getReadableMonthFormat(searchParams.get('checkOut'))}`;
 
   useEffect(() => {
     const locationState = location.state;
@@ -75,7 +65,26 @@ const Checkout = () => {
    * @param {React.ChangeEvent<HTMLInputElement>} e The input change event.
    */
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value: rawValue } = e.target;
+
+    let value = rawValue;
+
+    // special formatting for "expiry"
+    if (name === 'expiry') {
+      // 1) remove anything that isn't 0–9
+      const digits = rawValue.replace(/\D/g, '');
+
+      // 2) if they've typed more than 2 digits, insert slash
+      if (digits.length > 2) {
+        value = digits.slice(0, 2) + '/' + digits.slice(2, 4);
+      } else {
+        value = digits;
+      }
+
+      // 3) cap at 5 characters total (MM/YY)
+      value = value.slice(0, 5);
+    }
+
     const isValid = validationSchema[name](value);
     setFormData({ ...formData, [name]: value });
     setErrors({ ...errors, [name]: !isValid });
@@ -114,24 +123,43 @@ const Checkout = () => {
       isLoading: true,
       data: {},
     });
-    const response = await networkAdapter.post(
-      '/api/payments/confirmation',
-      formData
-    );
-    if (response && response.data && response.errors.length === 0) {
-      setPaymentConfirmationDetails({
-        isLoading: false,
-        data: response.data,
+
+    try {
+      const payRes = await networkAdapter.post('/api/payments/confirmation', formData);
+
+      if (!(payRes.status === 'success' && payRes.paid)) {
+        throw new Error('Payment was declined');
+      }
+
+      const hotelId = searchParams.get('hotelCode');
+      const roomId = location.state?.roomId;
+      const check_in = searchParams.get('checkIn');
+      const check_out = searchParams.get('checkOut');
+      const total = location.state?.total;
+
+      const bookRes = await networkAdapter.post('/api/hotel/book', {
+        hotel_id: hotelId,
+        room_id: roomId,
+        check_in,
+        check_out,
+        total_price: total,
       });
-      const hotelName = searchParams.get('hotelName').replaceAll('-', '_');
-      navigate(`/booking-confirmation?payment=sucess&hotel=${hotelName}`, {
+
+      if (bookRes.status !== 'success') {
+        throw new Error(bookRes?.message || 'Booking failed');
+      }
+
+      navigate('/booking-confirmation?payment=sucess', {
         state: {
-          confirmationData: response.data,
+          confirmationData: bookRes.data,
         },
       });
-    } else {
-      setToastMessage('Payment failed. Please try again.');
+
+    } catch (err) {
+      // Something went wrong in either payment or booking
+      setToastMessage(err.message || 'Something went wrong. Please try again.');
       setIsSubmitDisabled(false);
+    } finally {
       setPaymentConfirmationDetails({
         isLoading: false,
         data: {},

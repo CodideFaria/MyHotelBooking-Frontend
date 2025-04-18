@@ -32,6 +32,24 @@ const BookingConfirmation = () => {
   useEffect(() => {
     if (location.state) {
       const { bookingDetails } = location.state.confirmationData;
+    //   {
+    //     "id": "21712cd0-b823-4bb3-a2ec-83ae1e752189",
+    //     "check_in": "2025-04-20",
+    //     "check_out": "2025-04-21",
+    //     "status": "booked",
+    //     "total_price": 33.6,
+    //     "created_at": "2025-04-17 16:25:19.072354",
+    //     "updated_at": "2025-04-17 16:25:19.072364",
+    //     "room": {
+    //         "id": "5545a0b1-f94c-494f-9246-7f34b490be71",
+    //         "description": "Deluxe Guest room",
+    //         "room_number": 101,
+    //         "room_type": "Deluxe",
+    //         "capacity": 2,
+    //         "price": 15,
+    //         "is_available": true
+    //     }
+    // }
       setBookingDetails(bookingDetails);
     } else {
       navigate('/');

@@ -21,7 +21,7 @@ const HotelsSearch = () => {
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
 
   // State for managing location input value
-  const [locationInputValue, setLocationInputValue] = useState('pune');
+  const [locationInputValue, setLocationInputValue] = useState('');
 
   // State for managing number of guests input value
   const [numGuestsInputValue, setNumGuestsInputValue] = useState('');
@@ -224,17 +224,13 @@ const HotelsSearch = () => {
     const hotelsResultsResponse = await networkAdapter.get('/api/hotels', {
       filters: JSON.stringify(filters),
       currentPage: currentResultsPage,
-      advancedFilters: JSON.stringify([
-        {
-          sortBy: sortByFilterValue.value,
-        },
-      ]),
+      sortBy: sortByFilterValue.value,
     });
-    if (hotelsResultsResponse) {
+    if (hotelsResultsResponse.status === 'success') {
       setHotelsResults({
         isLoading: false,
-        data: hotelsResultsResponse.data.elements,
-        errors: hotelsResultsResponse.errors,
+        data: hotelsResultsResponse.data,
+        errors: [],
         metadata: hotelsResultsResponse.metadata,
         pagination: hotelsResultsResponse.paging,
       });
@@ -242,14 +238,12 @@ const HotelsSearch = () => {
   };
 
   const getVerticalFiltersData = async () => {
-    const filtersDataResponse = await networkAdapter.get(
-      'api/hotels/verticalFilters'
-    );
-    if (filtersDataResponse) {
+    const filtersDataResponse = await networkAdapter.get('api/hotels/verticalFilters');
+    if (filtersDataResponse.status === 'success') {
       setFiltersData({
         isLoading: false,
-        data: filtersDataResponse.data.elements,
-        errors: filtersDataResponse.errors,
+        data: filtersDataResponse.data,
+        errors: [],
       });
     }
   };
@@ -274,11 +268,9 @@ const HotelsSearch = () => {
 
   // Fetches the list of available cities
   const fetchAvailableCities = async () => {
-    const availableCitiesResponse = await networkAdapter.get(
-      '/api/availableCities'
-    );
-    if (availableCitiesResponse) {
-      setAvailableCities(availableCitiesResponse.data.elements);
+    const availableCitiesResponse = await networkAdapter.get('/api/availableCities');
+    if (availableCitiesResponse.status === 'success') {
+      setAvailableCities(availableCitiesResponse.data);
     }
   };
 

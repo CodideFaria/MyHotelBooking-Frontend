@@ -30,7 +30,7 @@ const Register = () => {
   const handleSubmit = async (values) => {
     const response = await networkAdapter.put('/api/register', values);
     console.log('response', response);
-    if (response && response.errors && response.errors.length < 1) {
+    if (response && response.status === 'success') {
       setToastMessage(REGISTRATION_MESSAGES.SUCCESS);
       setToastType('success');
       setShowToast(true);

@@ -32,6 +32,8 @@ const HotelViewCard = (props) => {
     navigate(`/hotel/${hotelCode}`);
   };
 
+  console.log(props)
+
   return (
     <div
       className="card border p-4 flex flex-col md:flex-row gap-x-2 w-full"
@@ -43,8 +45,8 @@ const HotelViewCard = (props) => {
           className="block text-slate-700 hover:text-brand transition-colors duration-300"
         >
           <img
-            src={image.imageUrl}
-            alt={image.accessibleText}
+            src={`/images/hotels/${hotelCode}/${image}`}
+            alt={title}
             className="md:w-[220px] md:h-[140px]"
           />
         </Link>
@@ -74,7 +76,7 @@ const HotelViewCard = (props) => {
             {ratings} <FontAwesomeIcon icon={faStar} />
           </h4>
           <p className="text-slate-600 font-bold whitespace-nowrap">
-            € {formatPrice(price)}
+            €{formatPrice(price)}
           </p>
         </div>
         <button

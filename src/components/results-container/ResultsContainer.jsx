@@ -39,8 +39,7 @@ const ResultsContainer = (props) => {
   } = props;
 
   // Check if sorting filter is visible
-  const isSortingFilterVisible =
-    sortingFilterOptions && sortingFilterOptions.length > 0;
+  const isSortingFilterVisible = sortingFilterOptions && sortingFilterOptions.length > 0;
 
   const [isVerticalFiltersOpen, setIsVerticalFiltersOpen] = useState(false);
 
@@ -104,12 +103,12 @@ const ResultsContainer = (props) => {
             ) : hotelsResults.data.length > 0 ? (
               hotelsResults.data.map((hotel) => (
                 <HotelViewCard
-                  key={hotel.hotelCode}
-                  id={hotel.hotelCode}
-                  title={hotel.title}
+                  key={hotel.id}
+                  id={hotel.id}
+                  title={hotel.name}
                   image={hotel.images[0]}
-                  subtitle={hotel.subtitle}
-                  benefits={hotel.benefits}
+                  subtitle={hotel.description}
+                  benefits={hotel.features}
                   ratings={hotel.ratings}
                   price={hotel.price}
                 />

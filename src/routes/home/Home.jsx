@@ -17,7 +17,7 @@ const Home = () => {
 
   // State variables
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
-  const [locationInputValue, setLocationInputValue] = useState('pune');
+  const [locationInputValue, setLocationInputValue] = useState('');
   const [numGuestsInputValue, setNumGuestsInputValue] = useState('');
   const [popularDestinationsData, setPopularDestinationsData] = useState({
     isLoading: true,
@@ -108,31 +108,27 @@ const Home = () => {
      * @returns {Promise<void>} A promise that resolves when the data is fetched.
      */
     const getInitialData = async () => {
-      const popularDestinationsResponse = await networkAdapter.get(
-        '/api/popularDestinations'
-      );
-      const hotelsResultsResponse =
-        await networkAdapter.get('/api/nearbyHotels');
+      const popularDestinationsResponse = await networkAdapter.get('/api/popularDestinations');
+      const hotelsResultsResponse = await networkAdapter.get('/api/nearbyHotels');
+      const availableCitiesResponse = await networkAdapter.get('/api/availableCities');
 
-      const availableCitiesResponse = await networkAdapter.get(
-        '/api/availableCities'
-      );
-      if (availableCitiesResponse) {
-        setAvailableCities(availableCitiesResponse.data.elements);
+      if (availableCitiesResponse.status === 'success') {
+        setAvailableCities(availableCitiesResponse.data);
       }
 
-      if (popularDestinationsResponse) {
+      if (popularDestinationsResponse.status === 'success') {
         setPopularDestinationsData({
           isLoading: false,
-          data: popularDestinationsResponse.data.elements,
-          errors: popularDestinationsResponse.errors,
+          data: popularDestinationsResponse.data,
+          errors: [],
         });
       }
-      if (hotelsResultsResponse) {
+
+      if (hotelsResultsResponse.status === 'success') {
         setHotelsResults({
           isLoading: false,
-          data: hotelsResultsResponse.data.elements,
-          errors: hotelsResultsResponse.errors,
+          data: hotelsResultsResponse.data,
+          errors: [],
         });
       }
     };

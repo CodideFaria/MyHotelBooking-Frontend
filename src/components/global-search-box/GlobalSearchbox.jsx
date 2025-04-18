@@ -42,6 +42,7 @@ const GlobalSearchBox = (props) => {
         typeheadResults={locationTypeheadResults}
         icon={faLocationDot}
         onChangeInput={onLocationChangeInput}
+        placeholder="Location"
       />
       <DateRangePicker
         isDatePickerVisible={isDatePickerVisible}

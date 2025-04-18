@@ -21,7 +21,7 @@ export const LOGIN_MESSAGES = {
  * Represents the default tax details for hotel booking.
  */
 export const DEFAULT_TAX_DETAILS =
-  'GST: 12% on €0 - €250, 12% on €250 - €750, 18% on €750 and above';
+  'GST: 12% on €0 - €25, 15% on €25 - €75, 18% on €75 and above';
 
 /**
  * Sorting filter labels

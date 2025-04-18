@@ -24,10 +24,7 @@ class NetworkAdapter {
         },
       });
 
-      console.log('Refresh response:', refreshResponse);
-
       if (refreshResponse.status === 200) {
-        console.log('Token refreshed successfully');
         const refreshData = await refreshResponse.json();
         // Update the stored token with the new one received
         localStorage.setItem('token', refreshData.token);
@@ -43,7 +40,6 @@ class NetworkAdapter {
         // Retry the original request with the new token (mark refresh as attempted)
         response = await this.fetchWithRefresh(url, options, true);
       } else {
-        console.error('Failed to refresh token');
         // If refresh fails, trigger the global auth callback (e.g., log out)
         if (NetworkAdapter.authCheckCallback) {
           NetworkAdapter.authCheckCallback();
