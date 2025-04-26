@@ -11,12 +11,10 @@ import Toast from 'components/ux/toast/Toast';
 import format from 'date-fns/format';
 
 /**
- * A component that displays the booking details for a hotel, including date range, room type, and pricing.
- *
- * @param {Object} props - The component's props.
- * @param {string} props.hotelCode - The unique code for the hotel.
+ * @param {string}   hotelCode
+ * @param {number}   discountPercentage  // NEW: percent off, e.g. 5 for 5%
  */
-const HotelBookingDetailsCard = ({ hotelCode }) => {
+const HotelBookingDetailsCard = ({ hotelCode, discountPercentage = 0 }) => {
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
   const navigate = useNavigate();
 
@@ -43,9 +41,10 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   });
 
   // Pricing states
-  const [total, setTotal] = useState(0);
   const [taxes, setTaxes] = useState(0);
   const [bookingPeriodDays, setBookingPeriodDays] = useState(1);
+  const [originalTotal, setOriginalTotal] = useState(0);
+  const [discountedTotal, setDiscountedTotal] = useState(0);
 
   // Booking details from API: cancellation policy, rooms, etc.
   const [bookingDetails, setBookingDetails] = useState({});
@@ -101,25 +100,26 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   const calculatePrices = () => {
     if (!selectedRoom || !selectedRooms.value) return;
 
-    const pricePerNight = selectedRoom.price * selectedRooms.value;
+    const roomsCount = selectedRooms.value;
+    const nights = bookingPeriodDays;
+
+    const basePerNight = selectedRoom.price * roomsCount;
+    const factor = 1 - discountPercentage / 100;
+    const discountedPerNight = basePerNight * factor;
+
     let gstRate = 0.12;
+    if (basePerNight > 75) gstRate = 0.18;
+    else if (basePerNight > 25) gstRate = 0.15;
 
-    if (pricePerNight > 75) {
-      gstRate = 0.18;
-    } else if (pricePerNight > 25) {
-      gstRate = 0.15;
-    }
+    const originalGst = basePerNight * nights * gstRate;
+    const discountedGst = discountedPerNight * nights * gstRate;
 
-    const totalGst = (pricePerNight * bookingPeriodDays * gstRate).toFixed(2);
-    const totalPrice = (
-      pricePerNight * bookingPeriodDays +
-      parseFloat(totalGst)
-    ).toFixed(2);
+    const origTotal = basePerNight * nights + originalGst;
+    const discTotal = discountedPerNight * nights + discountedGst;
 
-    if (!isNaN(totalPrice)) {
-      setTotal(formatPrice(totalPrice));
-    }
-    setTaxes(formatPrice(totalGst));
+    setOriginalTotal(formatPrice(origTotal));
+    setDiscountedTotal(formatPrice(discTotal));
+    setTaxes(formatPrice(originalGst)); // you can also show discounted tax if desired
   };
 
   /**
@@ -144,10 +144,12 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     const url = `/checkout?${queryString.stringify(queryParams)}`;
     navigate(url, {
       state: {
-        total,
+        total: discountedTotal,
         checkInTime: bookingDetails.checkInTime,
         checkOutTime: bookingDetails.checkOutTime,
-        roomId: selectedRoom.id
+        nights: bookingPeriodDays,
+        roomId: selectedRoom.id,
+        roomType: selectedRoom.type
       },
     });
   };
@@ -183,8 +185,8 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
             id: room.id,
           }));
           setRoomOptions(options);
-          if (options.length > 0 && !selectedRoom) {
-            setSelectedRoom(options[0]);
+          if (options.length > 0) {
+            setSelectedRoom(prev => prev || options[0]);
           }
         }
       } catch (error) {
@@ -206,7 +208,22 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
           <div className="text-lg font-semibold text-gray-800 mb-1">
             Total Price
           </div>
-          <div className="text-xl font-bold text-brand-600">€{total}</div>
+
+          {discountPercentage > 0 ? (
+            <div className="text-xl mb-1">
+              <span className="line-through text-red-500 mr-2">
+                €{originalTotal}
+              </span>
+              <span className="text-600 font-bold">
+                €{discountedTotal}
+              </span>
+            </div>
+          ) : (
+            <div className="text-xl font-bold text-brand-600">
+              €{originalTotal}
+            </div>
+          )}
+
           <div className="text-sm text-brand-secondary-hover">
             {bookingDetails.cancellationPolicy}
           </div>
@@ -275,7 +292,10 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       </div>
       <div className="px-6 py-4 bg-gray-50">
         <button
-          onClick={onBookingConfirm}
+          onClick={() => {
+            const totalToUse = discountPercentage > 0 ? discountedTotal : originalTotal;
+            onBookingConfirm(totalToUse);
+          }}
           className="w-full bg-brand-secondary text-white py-2 rounded hover:bg-brand-secondary-hover transition duration-300"
         >
           Confirm Booking

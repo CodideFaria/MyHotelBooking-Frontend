@@ -1,11 +1,10 @@
 import HotelBookingDetailsCard from '../hotel-booking-details-card/HotelBookingDetailsCard';
 import UserReviews from '../user-reviews/UserReviews';
 import { networkAdapter } from 'services/NetworkAdapter';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import ReactImageGallery from 'react-image-gallery';
 
 const HotelDetailsViewCard = ({ hotelDetails }) => {
-  console.log(hotelDetails);
   const images = hotelDetails.images.map((image) => ({
     original: `/images/hotels/${hotelDetails.id}/${image}`,
     thumbnail: `/images/hotels/${hotelDetails.id}/${image}`,
@@ -13,10 +12,28 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
     thumbnailLoading: 'lazy',
   }));
 
+  const today = useMemo(() => new Date(), []);
+
+  const activePromotions = useMemo(() => {
+    return (hotelDetails.promotions || [])
+      .filter(p => p.is_active)
+      .filter(p => {
+        const start = new Date(p.start_date);
+        const end   = new Date(p.end_date);
+        return start <= today && today <= end;
+      });
+  }, [hotelDetails.promotions, today]);
+
+  const bestDiscount = activePromotions.reduce(
+    (max, p) => Math.max(max, p.discount_percentage),
+    0
+  );
+
   const [reviewData, setReviewData] = useState({
     isLoading: true,
     data: [],
   });
+
   const [currentReviewsPage, setCurrentReviewPage] = useState(1);
 
   const handlePageChange = (page) => {
@@ -43,18 +60,13 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
       data: [],
     });
     const fetchHotelReviews = async () => {
-      const response = await networkAdapter.get(
-        `/api/hotel/${hotelDetails.id}/reviews`,
-        {
-          currentPage: currentReviewsPage,
-        }
-      );
-      if (response && response.data) {
+      const response = await networkAdapter.get(`/api/hotel/${hotelDetails.id}/reviews`, {
+        currentPage: currentReviewsPage,
+      });
+      if (response.status === 'success') {
         setReviewData({
           isLoading: false,
-          data: response.data.elements,
-          metadata: response.metadata,
-          pagination: response.paging,
+          data: response.data
         });
       }
     };
@@ -71,9 +83,16 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
               showPlayButton={false}
               showFullscreenButton={false}
             />
-            {Array.isArray(hotelDetails.promotions) && hotelDetails.promotions.length > 0 && (
-              <div className="absolute top-0 right-0 m-4 px-2 py-1 bg-yellow-500 text-white font-semibold text-xs rounded">
-                {hotelDetails.promotions.join(', ')} OFF
+            {activePromotions.length > 0 && (
+              <div className="absolute top-0 right-0 m-4 flex flex-col space-y-2">
+                {activePromotions.map(promo => (
+                  <span
+                    key={promo.id}
+                    className="bg-red-600 text-white font-semibold text-xs px-2 py-1 rounded"
+                  >
+                    {promo.title}: {promo.discount_percentage}% OFF
+                  </span>
+                ))}
               </div>
             )}
           </div>
@@ -105,13 +124,18 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
           </div>
         </div>
         <UserReviews
+          hotelId={hotelDetails.id}
           reviewData={reviewData}
+          setReviewData={setReviewData}
           handlePageChange={handlePageChange}
           handlePreviousPageChange={handlePreviousPageChange}
           handleNextPageChange={handleNextPageChange}
         />
       </div>
-      <HotelBookingDetailsCard hotelCode={hotelDetails.id} />
+      <HotelBookingDetailsCard
+        hotelCode={hotelDetails.id}
+        discountPercentage={bestDiscount}
+      />
     </div>
   );
 };

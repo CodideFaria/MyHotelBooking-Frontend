@@ -15,83 +15,94 @@ import Loader from 'components/ux/loader/loader';
  * @returns {JSX.Element} The user reviews component.
  */
 const UserReviews = ({
+  hotelId,
   reviewData,
+  setReviewData,
   handlePageChange,
   handlePreviousPageChange,
   handleNextPageChange,
 }) => {
   const [userRating, setUserRating] = useState(0);
-
   const [userReview, setUserReview] = useState('');
-
-  const [shouldHideUserRatingsSelector, setShouldHideUserRatingsSelector] =
-    useState(false);
-
+  const [shouldHideUserRatingsSelector, setShouldHideUserRatingsSelector] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  /**
-   * Handles the selected user rating.
-   * @param {number} rate - The rating value.
-   */
-  const handleRating = (rate) => {
-    setUserRating(rate);
-  };
-
-  const clearToastMessage = () => {
-    setToastMessage('');
-  };
+  const handleRating = (rate) => setUserRating(rate);
+  const clearToastMessage = () => setToastMessage('');
 
   const handleReviewSubmit = async () => {
     if (userRating === 0) {
-      setToastMessage({
-        type: 'error',
-        message: 'Please select a rating before submitting.',
-      });
+      setToastMessage({ type: 'error', message: 'Please select a rating' });
       return;
     }
-    // TODO: Add validation for userRating and userReview
-    const response = await networkAdapter.put('/api/hotel/add-review', {
+
+    const response = await networkAdapter.post('/api/hotel/add-review', {
       rating: userRating,
       review: userReview,
+      hotel_id: hotelId,
     });
-    if (response && response.errors.length === 0 && response.data.status) {
-      setToastMessage({
-        type: 'success',
-        message: response.data.status,
+
+    if (response.status === 'success') {
+      const newReview = response.data;
+      setReviewData(prev => {
+        const { reviews = [], totalReviews = 0, averageRating = 0, starCounts = {} } = prev.data || {};
+        const updatedReviews = [newReview, ...reviews];
+        const updatedTotal = totalReviews + 1;
+        const updatedStarCounts = { ...starCounts, [newReview.rating]: (starCounts[newReview.rating] || 0) + 1 };
+        const updatedAverage = (averageRating * totalReviews + newReview.rating) / updatedTotal;
+
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            reviews: updatedReviews,
+            totalReviews: updatedTotal,
+            starCounts: updatedStarCounts,
+            averageRating: updatedAverage,
+          },
+        };
       });
+
+      setToastMessage({ type: 'success', message: 'Review submitted!' });
+      setShouldHideUserRatingsSelector(true);
     } else {
-      setToastMessage({
-        type: 'error',
-        message: 'Review submission failed',
-      });
+      setToastMessage({ type: 'error', message: 'Submission failed.' });
     }
-    setShouldHideUserRatingsSelector(true);
   };
 
-  const handleUserReviewChange = (review) => {
-    setUserReview(review);
-  };
+  const handleUserReviewChange = (review) => setUserReview(review);
 
-  const isEmpty = reviewData.data.length === 0;
+  // Guard against undefined data and ensure reviews is always an array
+  const safeData = reviewData.data || {};
+  const reviews = Array.isArray(safeData.reviews) ? safeData.reviews : [];
+  const totalReviews = safeData.totalReviews || 0;
+  const averageRating = safeData.averageRating || 0;
+  const starCounts = safeData.starCounts || {};
+  const isEmpty = reviews.length === 0;
+
+  // Guard against undefined pagination
+  const safePagination = reviewData.pagination || {};
+  const currentPage = safePagination.currentPage || 1;
+  const totalPages = safePagination.totalPages || 1;
 
   return (
     <div className="flex flex-col p-4 border-t">
       <h1 className="text-xl font-bold text-gray-700">User Reviews</h1>
+
       <div className="flex flex-col md:flex-row py-4 bg-white shadow-sm gap-6">
-        {reviewData.data.length === 0 ? (
+        {isEmpty ? (
           <div className="w-3/5">
-            <span className="text-gray-500 italic">
-              Be the first to leave a review!
-            </span>
+            <span className="text-gray-500 italic">Be the first to leave a review!</span>
           </div>
         ) : (
           <RatingsOverview
-            averageRating={reviewData.metadata.averageRating}
-            ratingsCount={reviewData.metadata.totalReviews}
-            starCounts={reviewData.metadata.starCounts}
+            averageRating={averageRating}
+            ratingsCount={totalReviews}
+            starCounts={starCounts}
           />
         )}
-        {shouldHideUserRatingsSelector ? null : (
+
+        {!shouldHideUserRatingsSelector && (
           <UserRatingsSelector
             userRating={userRating}
             isEmpty={isEmpty}
@@ -102,6 +113,7 @@ const UserReviews = ({
           />
         )}
       </div>
+
       {toastMessage && (
         <Toast
           type={toastMessage.type}
@@ -109,28 +121,27 @@ const UserReviews = ({
           dismissError={clearToastMessage}
         />
       )}
+
       <div>
         {reviewData.isLoading ? (
-          <Loader height={'600px'} />
+          <Loader height="600px" />
         ) : (
-          <div>
-            {reviewData.data.map((review, index) => (
-              <Review
-                key={index}
-                reviewerName={review.reviewerName}
-                reviewDate={review.date}
-                review={review.review}
-                rating={review.rating}
-                verified={review.verified}
-              />
-            ))}
-          </div>
+          reviews.map((review, i) => (
+            <Review
+              key={i}
+              reviewerName={`${review.user.first_name} ${review.user.last_name}`}
+              reviewDate={review.created_at}
+              review={review.comment}
+              rating={review.rating}
+            />
+          ))
         )}
       </div>
-      {reviewData.data.length > 0 && (
+
+      {!isEmpty && (
         <PaginationController
-          currentPage={reviewData.pagination.currentPage}
-          totalPages={reviewData.pagination.totalPages}
+          currentPage={currentPage}
+          totalPages={totalPages}
           handlePageChange={handlePageChange}
           handlePreviousPageChange={handlePreviousPageChange}
           handleNextPageChange={handleNextPageChange}

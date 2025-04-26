@@ -1,10 +1,9 @@
+import { networkAdapter } from 'services/NetworkAdapter';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 /**
  * Represents the booking confirmation component.
@@ -12,11 +11,33 @@ import { useRef } from 'react';
  * @returns {JSX.Element} The booking confirmation component.
  */
 const BookingConfirmation = () => {
-  const contentToPrint = useRef(null);
-  const location = useLocation();
+  // Router navigation
   const navigate = useNavigate();
 
-  const [bookingDetails, setBookingDetails] = useState(null);
+  // Extract token from query params
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  const contentToPrint = useRef(null);
+
+  /**
+   * Confirm booking on component mount using the token from URL query.
+   */
+  useEffect(() => {
+    const confirmBooking = async () => {
+      try {
+        if (!token) {
+          console.error('No token provided in URL query');
+          return;
+        }
+        await networkAdapter.get(`/api/hotel/confirm/${token}`);
+        // Optionally handle response or update state here
+      } catch (error) {
+        console.error('Error confirming booking:', error);
+      }
+    };
+
+    confirmBooking();
+  }, [token]);
 
   /**
    * Handles the print event.
@@ -28,52 +49,33 @@ const BookingConfirmation = () => {
     removeAfterPrint: true,
   });
 
-  // Set booking details from location state passed from the previous page(checkout page)
-  useEffect(() => {
-    if (location.state) {
-      const { bookingDetails } = location.state.confirmationData;
-    //   {
-    //     "id": "21712cd0-b823-4bb3-a2ec-83ae1e752189",
-    //     "check_in": "2025-04-20",
-    //     "check_out": "2025-04-21",
-    //     "status": "booked",
-    //     "total_price": 33.6,
-    //     "created_at": "2025-04-17 16:25:19.072354",
-    //     "updated_at": "2025-04-17 16:25:19.072364",
-    //     "room": {
-    //         "id": "5545a0b1-f94c-494f-9246-7f34b490be71",
-    //         "description": "Deluxe Guest room",
-    //         "room_number": 101,
-    //         "room_type": "Deluxe",
-    //         "capacity": 2,
-    //         "price": 15,
-    //         "is_available": true
-    //     }
-    // }
-      setBookingDetails(bookingDetails);
-    } else {
-      navigate('/');
-    }
-  }, [bookingDetails, location.state, navigate]);
-
   return (
     <div className="md:mx-auto max-w-[800px] my-40">
       <div className="flex justify-between mx-2 rounded-md my-2">
         <Link
           to="/"
-          className={`border p-2 min-w-[120px] text-center transition-all delay-100 hover:bg-brand hover:text-white`}
+          className="border p-2 min-w-[120px] text-center transition-all delay-100 hover:bg-brand hover:text-white"
         >
           Back to home
         </Link>
-        <button
-          onClick={() => {
-            handlePrint(null, () => contentToPrint.current);
-          }}
-          className="border p-2 min-w-[120px] transition-all delay-75 hover:bg-gray-500 hover:text-white hover:animate-bounce"
-        >
-          Print
-        </button>
+
+        {/* Print and Go to Bookings buttons grouped together */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handlePrint(null, () => contentToPrint.current)}
+            className="border p-2 min-w-[120px] transition-all delay-75 hover:bg-brand hover:text-white hover:animate-bounce"
+          >
+            Print
+          </button>
+          <button
+            onClick={() => navigate('/user-profile/bookings')}
+            className="border p-2 min-w-[120px] transition-all delay-75 hover:bg-brand hover:text-white hover:animate-bounce"
+          >
+            Go to Bookings
+          </button>
+        </div>
       </div>
+
       <div
         ref={contentToPrint}
         className="flex mx-2  px-4 py-12 items-center justify-center flex-col border rounded-md"
@@ -93,19 +95,9 @@ const BookingConfirmation = () => {
           Please check your email for the booking details and instructions for
           your stay.
         </p>
-        <div className="mt-4 flex justify-center flex-wrap items-center">
-          {bookingDetails &&
-            bookingDetails.map((detail, index) => (
-              <div key={index} className="border-r-2 px-4">
-                <p className="text-gray-600 text-sm">{detail.label}</p>
-                <span className="text-gray-600 text-sm font-bold">
-                  {detail.value}
-                </span>
-              </div>
-            ))}
-        </div>
       </div>
     </div>
   );
 };
+
 export default BookingConfirmation;

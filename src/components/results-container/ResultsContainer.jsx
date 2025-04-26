@@ -111,6 +111,7 @@ const ResultsContainer = (props) => {
                   benefits={hotel.features}
                   ratings={hotel.ratings}
                   price={hotel.price}
+                  promotions={hotel.promotions}
                 />
               ))
             ) : (

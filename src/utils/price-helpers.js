@@ -1,15 +1,16 @@
 /**
- * Formats the price with commas for every thousand.
- * @param {number} price - The price to format.
- * @returns {string} - The formatted price.
- *
- * @example
- * const formattedPrice = formatPrice(1000000); // Returns '10,00,000'
- * const formattedPrice = formatPrice(1000); // Returns '1,000'
+ * Formats the price with commas for every thousand
+ * and exactly two decimal places.
+ * @param {number|string} price - The price to format.
+ * @returns {string} - The formatted price, e.g. "1,23,456.00"
  */
 const formatPrice = (price) => {
-  if (!price) return parseFloat(0).toLocaleString('en-IN');
-  return parseFloat(price).toLocaleString('en-IN');
+  // coerce to number (handles strings, null, undefined)
+  const num = parseFloat(price) || 0;
+  return num.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 export { formatPrice };

@@ -2,10 +2,11 @@ import { faStar, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatPrice } from 'utils/price-helpers';
+import React, { useMemo } from 'react';
 
 /**
  * HotelViewCard Component
- * Renders a card view for a hotel, displaying its image, title, subtitle, benefits, price, and ratings.
+ * Renders a card view for a hotel, displaying its image, title, subtitle, benefits, price, ratings, and active promotions.
  * Provides a 'Book now' button to navigate to the hotel's detailed view.
  *
  * @param {Object} props - Props for the component.
@@ -14,6 +15,7 @@ import { formatPrice } from 'utils/price-helpers';
  * @param {string} props.title - The title of the hotel.
  * @param {string} props.subtitle - The subtitle or a short description of the hotel.
  * @param {Array} props.benefits - A list of benefits or features offered by the hotel.
+ * @param {Array} props.promotions - A list of promotion objects associated with the hotel.
  * @param {string} props.price - The price information for the hotel.
  * @param {number} props.ratings - The ratings of the hotel.
  */
@@ -24,6 +26,7 @@ const HotelViewCard = (props) => {
     title,
     subtitle,
     benefits,
+    promotions = [],
     price,
     ratings,
   } = props;
@@ -32,7 +35,17 @@ const HotelViewCard = (props) => {
     navigate(`/hotel/${hotelCode}`);
   };
 
-  console.log(props)
+  // Filter only active promotions
+  const today = useMemo(() => new Date(), []);
+  const activePromos = useMemo(() => {
+      return (promotions || [])
+        .filter(p => p.is_active)
+        .filter(p => {
+          const start = new Date(p.start_date);
+          const end   = new Date(p.end_date);
+          return start <= today && today <= end;
+        });
+    }, [promotions, today]);
 
   return (
     <div
@@ -60,11 +73,28 @@ const HotelViewCard = (props) => {
             <h4 className="text-2xl font-bold text-slate-600">{title}</h4>
           </Link>
           <p className="text-slate-600 text-sm">{subtitle}</p>
+
+          {/* Render active promotions as badges */}
+          {activePromos.length > 0 && (
+            <div className="my-2 flex flex-wrap gap-2">
+              {activePromos.map(promo => (
+                <span
+                  key={promo.id}
+                  className="bg-red-600 text-white text-xs font-medium px-2.5 py-0.5 rounded"
+                >
+                  {promo.title}: {promo.discount_percentage}% off
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <ul>
           {benefits.length > 0 &&
             benefits.map((benefit, index) => (
-              <li className="text-brand-secondary-hover font-medium text-sm" key={index}>
+              <li
+                className="text-brand-secondary-hover font-medium text-sm"
+                key={index}
+              >
                 <FontAwesomeIcon icon={faCheck} /> {benefit}
               </li>
             ))}
@@ -80,7 +110,7 @@ const HotelViewCard = (props) => {
           </p>
         </div>
         <button
-          className=" bg-brand-secondary hover:bg-brand-secondary-hover px-4 py-2 text-white whitespace-nowrap"
+          className="bg-brand-secondary hover:bg-brand-secondary-hover px-4 py-2 text-white whitespace-nowrap"
           onClick={onBookNowClick}
         >
           Book now

@@ -1,54 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import FinalBookingSummary from './components/final-booking-summary/FinalBookingSummary';
-import { useLocation } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getReadableMonthFormat } from 'utils/date-helpers';
-import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from 'contexts/AuthContext';
-import { useContext } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 import Loader from 'components/ux/loader/loader';
 import Toast from 'components/ux/toast/Toast';
 
 /**
- * Checkout component for processing payments and collecting user information.
+ * Checkout component for initiating Stripe Checkout sessions and collecting user information.
  *
  * @returns {JSX.Element} The rendered Checkout component.
  */
 const Checkout = () => {
   const [errors, setErrors] = useState({});
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState('');
   const { isAuthenticated, userDetails } = useContext(AuthContext);
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(false);
-  const [paymentConfirmationDetails, setPaymentConfirmationDetails] = useState({
-    isLoading: false,
-    data: {},
-  });
+  const [isLoading, setIsLoading] = useState(false);
 
+  const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const dismissToast = () => {
-    setToastMessage('');
-  };
+  const dismissToast = () => setToastMessage('');
 
-  // Form state for collecting user payment and address information
+  // Form state for collecting user email and address information
   const [formData, setFormData] = useState({
-    email: userDetails?.email ? userDetails?.email : '',
-    nameOnCard: `${userDetails?.first_name || ''} ${userDetails?.last_name || ''}`.trim(),
-    cardNumber: '',
-    expiry: '',
-    cvc: '',
+    email: userDetails?.email || '',
     address: '',
     city: '',
     state: '',
     postalCode: '',
   });
 
-  // Format the check-in and check-out date and time
-  const checkInDateTime = `${getReadableMonthFormat(searchParams.get('checkIn'))}`;
-  const checkOutDateTime = `${getReadableMonthFormat(searchParams.get('checkOut'))}`;
+  // Format the check-in and check-out dates
+  const checkInDateTime = getReadableMonthFormat(searchParams.get('checkIn'));
+  const checkOutDateTime = getReadableMonthFormat(searchParams.get('checkOut'));
 
   useEffect(() => {
     const locationState = location.state;
@@ -62,44 +50,16 @@ const Checkout = () => {
 
   /**
    * Handle form input changes and validate the input.
-   * @param {React.ChangeEvent<HTMLInputElement>} e The input change event.
    */
   const handleChange = (e) => {
-    const { name, value: rawValue } = e.target;
-
-    let value = rawValue;
-
-    // special formatting for "expiry"
-    if (name === 'expiry') {
-      // 1) remove anything that isn't 0–9
-      const digits = rawValue.replace(/\D/g, '');
-
-      // 2) if they've typed more than 2 digits, insert slash
-      if (digits.length > 2) {
-        value = digits.slice(0, 2) + '/' + digits.slice(2, 4);
-      } else {
-        value = digits;
-      }
-
-      // 3) cap at 5 characters total (MM/YY)
-      value = value.slice(0, 5);
-    }
-
-    const isValid = validationSchema[name](value);
+    const { name, value } = e.target;
+    const isValid = validationSchema[name]?.(value) ?? true;
     setFormData({ ...formData, [name]: value });
     setErrors({ ...errors, [name]: !isValid });
   };
 
   /**
-   * Handle form submission and validate the form.
-   * @param {React.FormEvent<HTMLFormElement>} e The form submission event.
-   * @returns {void}
-   * @todo Implement form submission logic.
-   * @todo Implement form validation logic.
-   * @todo Implement form submission error handling.
-   * @todo Implement form submission success handling.
-   * @todo Implement form submission loading state.
-   * @todo Implement form submission error state.
+   * Handle form submission, create booking, then initiate Stripe Checkout.
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,63 +67,60 @@ const Checkout = () => {
     const newErrors = {};
 
     Object.keys(formData).forEach((field) => {
-      const isFieldValid = validationSchema[field](formData[field]);
-      newErrors[field] = !isFieldValid;
-      isValid = isValid && isFieldValid;
+      const valid = validationSchema[field]?.(formData[field]) ?? true;
+      newErrors[field] = !valid;
+      isValid = isValid && valid;
     });
-
     setErrors(newErrors);
-
-    if (!isValid) {
-      return; // Stop form submission if there are errors
-    }
+    if (!isValid) return;
 
     setIsSubmitDisabled(true);
-    setPaymentConfirmationDetails({
-      isLoading: true,
-      data: {},
-    });
+    setIsLoading(true);
 
     try {
-      const payRes = await networkAdapter.post('/api/payments/confirmation', formData);
-
-      if (!(payRes.status === 'success' && payRes.paid)) {
-        throw new Error('Payment was declined');
-      }
-
       const hotelId = searchParams.get('hotelCode');
       const roomId = location.state?.roomId;
+      const roomType = location.state?.roomType;
       const check_in = searchParams.get('checkIn');
       const check_out = searchParams.get('checkOut');
-      const total = location.state?.total;
+      const nights = location.state?.nights;
+      const totalRaw = location.state?.total;
 
+      // 1. Create booking
       const bookRes = await networkAdapter.post('/api/hotel/book', {
         hotel_id: hotelId,
         room_id: roomId,
         check_in,
         check_out,
-        total_price: total,
+        total_price: totalRaw,
+        customer_email: formData.email,
       });
 
       if (bookRes.status !== 'success') {
-        throw new Error(bookRes?.message || 'Booking failed');
+        throw new Error(bookRes.message || 'Booking failed');
       }
 
-      navigate('/booking-confirmation?payment=sucess', {
-        state: {
-          confirmationData: bookRes.data,
-        },
+      // 2. Initiate Stripe Checkout session
+      const sessionResponse = await networkAdapter.post('/api/payments/create-checkout-session', {
+        bookingId: bookRes.data.id,
+        amount: totalRaw,
+        hotel_id: hotelId,
+        room_type: roomType,
+        email: formData.email,
+        nights,
       });
 
+      if (sessionResponse.url) {
+        window.location.href = sessionResponse.url;
+      } else {
+        throw new Error(sessionResponse.message || 'Failed to start payment session');
+      }
     } catch (err) {
-      // Something went wrong in either payment or booking
+      console.error(err);
       setToastMessage(err.message || 'Something went wrong. Please try again.');
       setIsSubmitDisabled(false);
     } finally {
-      setPaymentConfirmationDetails({
-        isLoading: false,
-        data: {},
-      });
+      setIsLoading(false);
     }
   };
 
@@ -175,22 +132,16 @@ const Checkout = () => {
         checkOut={checkOutDateTime}
         isAuthenticated={isAuthenticated}
         phone={userDetails?.phone}
-        email={userDetails?.email}
+        email={formData.email}
         fullName={userDetails?.fullName}
       />
+
       <div className="relative bg-white border shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-lg mx-auto">
-        {paymentConfirmationDetails.isLoading && (
-          <Loader
-            isFullScreen={true}
-            loaderText={'Payment in progress, hold tight!'}
-          />
+        {isLoading && (
+          <Loader isFullScreen loaderText="Processing, please wait..." />
         )}
-        <form
-          onSubmit={handleSubmit}
-          className={` ${
-            paymentConfirmationDetails.isLoading ? 'opacity-40' : ''
-          }`}
-        >
+
+        <form onSubmit={handleSubmit} className={`${isLoading ? 'opacity-40' : ''}`}>
           <InputField
             label="Email address"
             type="email"
@@ -198,61 +149,21 @@ const Checkout = () => {
             value={formData.email}
             onChange={handleChange}
             placeholder="Email"
-            required={true}
+            required
             error={errors.email}
           />
+
           <InputField
-            label="Name on card"
-            type="text"
-            name="nameOnCard"
-            value={formData.nameOnCard}
-            onChange={handleChange}
-            placeholder="Name as it appears on card"
-            required={true}
-            error={errors.nameOnCard}
-          />
-          <InputField
-            label="Card number"
-            type="text"
-            name="cardNumber"
-            value={formData.cardNumber}
-            onChange={handleChange}
-            placeholder="0000 0000 0000 0000"
-            required={true}
-            error={errors.cardNumber}
-          />
-          <div className="flex mb-4 justify-between">
-            <InputField
-              label="Expiration date (MM/YY)"
-              type="text"
-              name="expiry"
-              value={formData.expiry}
-              onChange={handleChange}
-              placeholder="MM/YY"
-              required={true}
-              error={errors.expiry}
-            />
-            <InputField
-              label="CVC"
-              type="text"
-              name="cvc"
-              value={formData.cvc}
-              onChange={handleChange}
-              placeholder="CVC"
-              required={true}
-              error={errors.cvc}
-            />
-          </div>
-          <InputField
-            label="Address"
+            label="Street address"
             type="text"
             name="address"
             value={formData.address}
             onChange={handleChange}
             placeholder="Street Address"
-            required={true}
+            required
             error={errors.address}
           />
+
           <InputField
             label="City"
             type="text"
@@ -260,9 +171,10 @@ const Checkout = () => {
             value={formData.city}
             onChange={handleChange}
             placeholder="City"
-            required={true}
+            required
             error={errors.city}
           />
+
           <div className="flex mb-4 justify-between">
             <InputField
               label="State / Province"
@@ -271,7 +183,7 @@ const Checkout = () => {
               value={formData.state}
               onChange={handleChange}
               placeholder="State"
-              required={true}
+              required
               error={errors.state}
             />
             <InputField
@@ -281,32 +193,25 @@ const Checkout = () => {
               value={formData.postalCode}
               onChange={handleChange}
               placeholder="Postal Code"
-              required={true}
+              required
               error={errors.postalCode}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <button
-              className={`bg-brand hover:bg-brand-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-300 ${
-                isSubmitDisabled
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-brand-hover'
-              }`}
-              type="submit"
-              disabled={isSubmitDisabled}
-            >
-              Pay € {location.state?.total}
-            </button>
-          </div>
+
+          <button
+            className={`bg-brand hover:bg-brand-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-300 ${
+              isSubmitDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            type="submit"
+            disabled={isSubmitDisabled}
+          >
+            Pay €{location.state?.total}
+          </button>
         </form>
 
         {toastMessage && (
           <div className="my-4">
-            <Toast
-              message={toastMessage}
-              type={'error'}
-              dismissError={dismissToast}
-            />
+            <Toast message={toastMessage} type="error" dismissError={dismissToast} />
           </div>
         )}
       </div>
@@ -316,17 +221,6 @@ const Checkout = () => {
 
 /**
  * Generic Input field component for collecting user information.
- * @param {Object} props The component props.
- * @param {string} props.label The input field label.
- * @param {string} props.type The input field type.
- * @param {string} props.name The input field name.
- * @param {string} props.value The input field value.
- * @param {Function} props.onChange The input field change handler.
- * @param {string} props.placeholder The input field placeholder.
- * @param {boolean} props.required The input field required status.
- * @param {boolean} props.error The input field error status.
- *
- * @returns {JSX.Element} The rendered InputField component.
  */
 const InputField = ({
   label,
@@ -339,38 +233,27 @@ const InputField = ({
   error,
 }) => (
   <div className="mb-4">
-    <label
-      className="block text-gray-700 text-sm font-bold mb-2"
-      htmlFor={name}
-    >
+    <label htmlFor={name} className="block text-gray-700 text-sm font-bold mb-2">
       {label}
     </label>
     <input
-      className={`shadow appearance-none border ${
-        error ? 'border-red-500' : 'border-gray-300'
-      } rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
       id={name}
-      type={type}
       name={name}
+      type={type}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
       required={required}
-      aria-invalid={error ? 'true' : 'false'}
+      aria-invalid={error}
+      className={`shadow appearance-none border ${error ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
     />
-    {error && (
-      <p className="text-red-500 text-xs my-1">Please check this field.</p>
-    )}
+    {error && <p className="text-red-500 text-xs my-1">Please check this field.</p>}
   </div>
 );
 
 // Validation schema for form fields
 const validationSchema = {
   email: (value) => /\S+@\S+\.\S+/.test(value),
-  nameOnCard: (value) => value.trim() !== '',
-  cardNumber: (value) => /^\d{16}$/.test(value), // Simplistic validation: just check if it has 16 digits.
-  expiry: (value) => /^(0[1-9]|1[0-2])\/\d{2}$/.test(value), // MM/YY format
-  cvc: (value) => /^\d{3,4}$/.test(value), // 3 or 4 digits
   address: (value) => value.trim() !== '',
   city: (value) => value.trim() !== '',
   state: (value) => value.trim() !== '',

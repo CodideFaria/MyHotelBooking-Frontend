@@ -105,16 +105,23 @@ class NetworkAdapter {
     }
   }
 
-  async delete(endpoint) {
+  async delete(endpoint, data = null) {
     const url = new URL(endpoint, NetworkAdapter.#API_URL);
     const token = localStorage.getItem('token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+
+    const options = {
+      method: 'DELETE',
+      headers,
+      // only include a body if data was passed
+      ...(data && { body: JSON.stringify(data) })
+    };
 
     try {
-      const response = await this.fetchWithRefresh(url.toString(), {
-        method: 'DELETE',
-        headers,
-      });
+      const response = await this.fetchWithRefresh(url.toString(), options);
       return await response.json();
     } catch (error) {
       return { data: {}, errors: [error.message] };

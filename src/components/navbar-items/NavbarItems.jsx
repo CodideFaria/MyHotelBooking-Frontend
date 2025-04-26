@@ -3,25 +3,36 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import DropdownButton from 'components/ux/dropdown-button/DropdownButton';
 import { AuthContext } from 'contexts/AuthContext';
 
-
 const NavbarItems = ({ onHamburgerMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, logout } = useContext(AuthContext);
+  const { isAuthenticated, userDetails, logout } = useContext(AuthContext);
 
   const handleLogout = () => {
-    // Use the context's logout function to clear auth state immediately
     logout();
     navigate('/login');
   };
 
+  // Build dropdown options dynamically, including admin-only items
   const dropdownOptions = [
-    { name: 'Profile', onClick: () => navigate('/user-profile') },
-    { name: 'Bookings', onClick: () => navigate('/user-profile') },
+    { name: 'Profile', onClick: () => navigate('/user-profile/personal') },
+    { name: 'Bookings', onClick: () => navigate('/user-profile/bookings') },
+    ...(userDetails?.admin
+      ? [
+          { name: 'Analytics', onClick: () => navigate('/user-profile/analytics') },
+          { name: 'Promotions', onClick: () => navigate('/user-profile/promotions') },
+        ]
+      : []),
     { name: 'Logout', onClick: handleLogout },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
+
 
   return (
     <>

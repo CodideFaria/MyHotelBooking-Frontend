@@ -7,7 +7,6 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import reportWebVitals from './reportWebVitals';
 import Home from './routes/home/Home';
 import { AuthProvider } from './contexts/AuthContext';
-// import { makeServer } from './mirage/mirageServer';
 import HotelDetails from './routes/hotel-details/HotelDetails';
 import Login from './routes/login/Login';
 import Register from './routes/register/Register';
@@ -18,9 +17,6 @@ import Checkout from 'routes/checkout/Checkout';
 import BookingConfirmation from 'routes/booking-confimation/BookingConifrmation';
 import NotFound from './routes/not-found/NotFound';
 
-// if (process.env.NODE_ENV === 'development') {
-//   makeServer();
-// }
 
 const router = createBrowserRouter([
   {
@@ -45,7 +41,7 @@ const router = createBrowserRouter([
         element: <AboutUs />,
       },
       {
-        path: '/user-profile',
+        path: '/user-profile/:section?',
         element: <UserProfile />,
       },
       {
