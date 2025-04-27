@@ -84,7 +84,7 @@ const Checkout = () => {
       const check_in = searchParams.get('checkIn');
       const check_out = searchParams.get('checkOut');
       const nights = location.state?.nights;
-      const totalRaw = location.state?.total;
+      const totalRaw = parseFloat(String(location.state?.total ?? '').replace(/,/g, ''));
 
       // 1. Create booking
       const bookRes = await networkAdapter.post('/api/hotel/book', {

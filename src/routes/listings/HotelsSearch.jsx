@@ -140,7 +140,7 @@ const HotelsSearch = () => {
     selectedFiltersState.forEach((category) => {
       const selectedValues = category.filters
         .filter((filter) => filter.isSelected)
-        .map((filter) => filter.value);
+        .map((filter) => filter.value ?? filter.id);
 
       if (selectedValues.length > 0) {
         filters[category.filterId] = selectedValues;

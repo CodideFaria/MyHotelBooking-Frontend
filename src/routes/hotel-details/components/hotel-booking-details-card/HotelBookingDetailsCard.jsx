@@ -149,7 +149,7 @@ const HotelBookingDetailsCard = ({ hotelCode, discountPercentage = 0 }) => {
         checkOutTime: bookingDetails.checkOutTime,
         nights: bookingPeriodDays,
         roomId: selectedRoom.id,
-        roomType: selectedRoom.type
+        roomType: selectedRoom.label
       },
     });
   };
@@ -180,7 +180,7 @@ const HotelBookingDetailsCard = ({ hotelCode, discountPercentage = 0 }) => {
           const availableRooms = response.data.rooms.filter(room => room.is_available);
           const options = availableRooms.map(room => ({
             value: room.id,
-            label: room.description, // you can append room type or room number if desired
+            label: room.description,
             price: room.price,
             id: room.id,
           }));
@@ -198,7 +198,7 @@ const HotelBookingDetailsCard = ({ hotelCode, discountPercentage = 0 }) => {
   }, [hotelCode]);
 
   return (
-    <div className="mx-2 bg-white shadow-xl rounded-xl overflow-hidden mt-2 md:mt-0 w-full md:w-[380px]">
+    <div className="mx-2 bg-white shadow-xl rounded-xl mt-2 md:mt-0 w-full md:w-[380px]">
       <div className="px-6 py-4 bg-brand text-white">
         <h2 className="text-xl font-bold">Booking Details</h2>
       </div>
